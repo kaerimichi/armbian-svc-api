@@ -7,6 +7,7 @@ const { spawn, execSync } = require('child_process')
 const { appendFileSync } = require('fs')
 const logfile = 'output.log'
 const port = process.env.PORT || 9200
+const token = process.env.TOKEN
 
 app.use(bodyParser())
 
@@ -16,6 +17,10 @@ router.post('/cmd', (ctx, next) => {
   try {
     const body = ctx.request.body
     const childProc = spawn(body.cmd, body.args)
+
+    if (ctx.headers['x-auth-token'] !== token) {
+      throw new Error('Unauthorized!')
+    }
 
     childProc.stdout.on('data', (data) => {
       appendFileSync(`./${logfile}`, data, 'utf8')
@@ -31,7 +36,7 @@ router.post('/cmd', (ctx, next) => {
       message: 'Command issued successfully.'
     }
   } catch (e) {
-    ctx.status = 500
+    ctx.status = 401
     ctx.body = {
       status: false,
       message: e.message
